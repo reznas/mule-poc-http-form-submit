@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:jms="http://www.mulesoft.org/schema/mule/jms" xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting" xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:tls="http://www.mulesoft.org/schema/mule/tls" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:context="http://www.springframework.org/schema/context" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd">
+    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
+    <context:property-placeholder location="dev.properties"/>
+    <file:connector name="File" writeToDirectory="${file.out}" autoDelete="true" streaming="true" validateConnections="true" doc:name="File"/>
+    <asynchronous-processing-strategy name="Asynchronous_Processing_Strategy" doc:name="Asynchronous Processing Strategy"/>
+    <flow name="mule-poc-http-form-SubmitFormFlow">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/*" doc:name="HTTP" allowedMethods="GET">
+            <http:response-builder >
+                <http:header headerName="Test-Header" value="Testing property"/>
+            </http:response-builder>
+            <http:error-response-builder />
+        </http:listener>
+        <logger level="INFO" doc:name="Logger"/>
+        <http:static-resource-handler resourceBase="${app.path}/web" defaultFile="index.html" doc:name="HTTP Static Resource Handler"/>
+    </flow>
+    <flow name="mule-poc-http-form-submit-SubmitFormResponseFlow">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/" allowedMethods="POST" doc:name="HTTP"/>
+        <logger level="INFO" doc:name="Logger" />
+        <async processingStrategy="Asynchronous_Processing_Strategy" doc:name="Async">
+            <set-payload   doc:name="Set Payload (Extract File)" value="#[message.inboundAttachments.get(&quot;user_file&quot;)]"/>
+
+            <file:outbound-endpoint path="${file.out}" connector-ref="File" responseTimeout="10000" doc:name="File"/>
+        </async>
+        <http:static-resource-handler resourceBase="${app.path}/web" defaultFile="form-submit-response.html" doc:name="HTTP Static Resource Handler"/>
+    </flow>
+
+</mule>
